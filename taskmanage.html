@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>休憩リマインダー</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; background: #f5f5f3; display: flex; justify-content: center; padding: 2rem 1rem; }
+  .layout { display: flex; gap: 1rem; align-items: flex-start; flex-wrap: wrap; justify-content: center; }
+  .card { background: #fff; border-radius: 16px; border: 1px solid #e5e5e3; padding: 2rem; width: 360px; }
+  .todo-card { width: 340px; }
+  .section-label { font-size: 11px; color: #aaa; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 0.75rem; }
+  .timer-box { background: #fafaf8; border: 1px solid #e5e5e3; border-radius: 12px; padding: 1.5rem; text-align: center; margin-bottom: 1rem; }
+  #timer-display { font-size: 52px; font-weight: 500; letter-spacing: -2px; color: #1a1a1a; }
+  #status-text { font-size: 13px; color: #888; margin-top: 4px; }
+  .settings { background: #f5f5f3; border-radius: 8px; padding: 1rem; margin-bottom: 1rem; }
+  .settings-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; font-size: 13px; color: #888; }
+  #interval-val { font-weight: 500; color: #1a1a1a; }
+  input[type=range] { width: 100%; accent-color: #1a1a1a; }
+  .buttons { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1rem; }
+  button { padding: 10px; border: 1px solid #d0d0cc; border-radius: 8px; background: #fff; font-size: 14px; cursor: pointer; transition: background 0.15s; }
+  button:hover { background: #f0f0ee; }
+  #hint { font-size: 12px; color: #aaa; text-align: center; margin-bottom: 1.5rem; }
+
+  .divider { border-top: 1px solid #e5e5e3; padding-top: 1.25rem; margin-top: 0.5rem; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
+  .tab { flex: 1; padding: 7px; font-size: 13px; border-radius: 7px; border: 1px solid #d0d0cc; background: #fff; cursor: pointer; color: #888; }
+  .tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+
+  .msg-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
+  .msg-item { display: flex; align-items: center; gap: 6px; background: #f5f5f3; border-radius: 8px; padding: 8px 10px; }
+  .msg-item .msg-label { flex: 1; font-size: 13px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .msg-item .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e8f0fe; color: #3a6bc9; margin-right: 2px; flex-shrink: 0; }
+  .msg-item button { padding: 2px 8px; font-size: 12px; border-radius: 6px; color: #aaa; border-color: transparent; background: transparent; min-width: unset; }
+  .msg-item button:hover { background: #e8e8e6; color: #555; }
+  .add-row { display: flex; gap: 6px; margin-top: 4px; }
+  .add-row input { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #d0d0cc; border-radius: 8px; background: #fff; outline: none; min-width: 0; }
+  .add-row input:focus { border-color: #aaa; }
+  .add-row button { padding: 8px 14px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
+  #tweet-status { font-size: 12px; color: #aaa; margin-top: 6px; min-height: 16px; }
+
+  /* popup */
+  #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; padding: 1rem; }
+  #overlay.show { display: flex; }
+  #popup { background: #fff; border-radius: 16px; padding: 1.5rem; width: 320px; max-height: 90vh; overflow-y: auto; text-align: center; }
+  #popup-icon { font-size: 28px; margin-bottom: 0.5rem; }
+  #popup-content { margin-bottom: 1rem; }
+  #popup-text { font-size: 15px; font-weight: 500; color: #1a1a1a; line-height: 1.5; }
+  .tweet-card { background: #f7f9f9; border: 1px solid #e1e8ed; border-radius: 12px; padding: 1rem; text-align: left; margin-top: 0.5rem; }
+  .tweet-author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+  .tweet-avatar { width: 36px; height: 36px; border-radius: 50%; background: #1da1f2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 600; flex-shrink: 0; }
+  .tweet-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
+  .tweet-handle { font-size: 12px; color: #888; }
+  .tweet-body { font-size: 13px; color: #1a1a1a; line-height: 1.5; word-break: break-word; }
+  .tweet-link { display: block; margin-top: 8px; font-size: 12px; color: #1da1f2; text-decoration: none; }
+  #popup-close { width: 100%; padding: 10px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 0.5rem; }
+  #popup-close:hover { background: #333; }
+
+  /* todo */
+  .progress-wrap { margin-bottom: 1rem; }
+  .progress-stats { display: flex; justify-content: space-between; font-size: 12px; color: #888; margin-bottom: 6px; }
+  .progress-stats .done-count { color: #1a1a1a; font-weight: 500; }
+  .progress-bar { height: 6px; background: #f0f0ee; border-radius: 3px; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1a1a1a; transition: width 0.2s; }
+  .todo-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; max-height: 360px; overflow-y: auto; }
+  .todo-item { display: flex; align-items: center; gap: 8px; background: #f5f5f3; border-radius: 8px; padding: 8px 10px; }
+  .todo-item.done { opacity: 0.45; }
+  .todo-item.done .todo-text { text-decoration: line-through; color: #888; }
+  .status-chip { font-size: 10px; padding: 3px 7px; border-radius: 10px; cursor: pointer; border: none; flex-shrink: 0; font-weight: 500; letter-spacing: 0.02em; }
+  .status-todo { background: #eee; color: #666; }
+  .status-doing { background: #fff3d6; color: #a67800; }
+  .status-review { background: #ffe0d0; color: #c05020; }
+  .status-done { background: #d8ebd8; color: #3a7a3a; }
+  .todo-text { flex: 1; font-size: 13px; color: #1a1a1a; word-break: break-word; }
+  .todo-item button.del { padding: 2px 6px; font-size: 12px; border-radius: 6px; color: #aaa; border-color: transparent; background: transparent; }
+  .todo-item button.del:hover { background: #e8e8e6; color: #555; }
+  .week-label { font-size: 11px; color: #aaa; margin-bottom: 0.5rem; }
+  .day-section { margin-bottom: 10px; border: 1px solid #eceae7; border-radius: 10px; overflow: hidden; }
+  .day-section.today { border-color: #1a1a1a; }
+  .day-header { display: flex; align-items: center; gap: 8px; padding: 8px 10px; cursor: pointer; background: #fafaf8; user-select: none; }
+  .day-header:hover { background: #f2f2ef; }
+  .day-caret { font-size: 10px; color: #aaa; transition: transform 0.15s; width: 10px; }
+  .day-section.collapsed .day-caret { transform: rotate(-90deg); }
+  .day-name { font-size: 13px; font-weight: 500; color: #1a1a1a; flex: 1; }
+  .day-section.today .day-name::after { content: ' ・今日'; font-size: 11px; color: #1a1a1a; font-weight: 400; }
+  .day-count { font-size: 11px; color: #888; }
+  .day-body { padding: 8px; background: #fff; }
+  .day-section.collapsed .day-body { display: none; }
+  .day-todos { display: flex; flex-direction: column; gap: 6px; margin-bottom: 6px; }
+  .day-todos:empty { display: none; }
+  .day-add { display: flex; gap: 6px; }
+  .day-add input { flex: 1; padding: 6px 8px; font-size: 12px; border: 1px solid #e5e5e3; border-radius: 6px; background: #fff; outline: none; min-width: 0; }
+  .day-add input:focus { border-color: #aaa; }
+  .day-add button { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+</style>
+</head>
+<body>
+<div class="layout">
+<div class="card">
+  <p class="section-label">休憩リマインダー</p>
+
+  <div class="timer-box">
+    <div id="timer-display">60:00</div>
+    <p id="status-text">次の休憩まで</p>
+  </div>
+
+  <div class="settings">
+    <div class="settings-row">
+      <span>間隔</span>
+      <span id="interval-val">60分</span>
+    </div>
+    <input type="range" id="interval" min="5" max="120" step="5" value="60">
+  </div>
+
+  <div class="buttons">
+    <button id="start-btn" onclick="toggleTimer()">開始</button>
+    <button onclick="resetTimer()">リセット</button>
+  </div>
+
+  <p id="hint">開始すると通知の許可を求めます</p>
+
+  <div class="divider">
+    <p class="section-label">アラートコンテンツ</p>
+    <div class="tabs">
+      <button class="tab active" onclick="switchTab('text')">テキスト</button>
+      <button class="tab" onclick="switchTab('tweet')">ツイート</button>
+    </div>
+
+    <div id="tab-text">
+      <div class="msg-list" id="msg-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-msg" placeholder="メッセージを追加..." maxlength="80">
+        <button onclick="addMsg()">追加</button>
+      </div>
+    </div>
+
+    <div id="tab-tweet" style="display:none;">
+      <div class="msg-list" id="tweet-list"></div>
+      <div class="add-row">
+        <input type="text" id="new-tweet" placeholder="ツイートのURLを貼り付け...">
+        <button onclick="addTweet()">追加</button>
+      </div>
+      <p id="tweet-status"></p>
+    </div>
+  </div>
+</div>
+
+<div class="card todo-card">
+  <p class="section-label">今週のToDo</p>
+  <p class="week-label" id="week-label"></p>
+
+  <div class="progress-wrap">
+    <div class="progress-stats">
+      <span id="progress-breakdown">—</span>
+      <span class="done-count" id="progress-count">0 / 0</span>
+    </div>
+    <div class="progress-bar"><div class="progress-fill" id="progress-fill" style="width:0%"></div></div>
+  </div>
+
+  <div id="todo-days"></div>
+</div>
+</div>
+
+<div id="overlay">
+  <div id="popup">
+    <div id="popup-icon">☕</div>
+    <div id="popup-content">
+      <div id="popup-text"></div>
+    </div>
+    <button id="popup-close" onclick="closePopup()">OK、休憩します！</button>
+  </div>
+</div>
+
+<script>
+let interval = 60, remaining = 3600, running = false, timerId = null, endTime = null;
+let messages = ['休憩しましょう！', '少し立ち上がって体を伸ばしてね', '水を飲んで一息つこう', '目を休めてください'];
+let tweets = []; // [{url, name, handle, text}]
+
+const display = document.getElementById('timer-display');
+const statusText = document.getElementById('status-text');
+const startBtn = document.getElementById('start-btn');
+const slider = document.getElementById('interval');
+const intervalVal = document.getElementById('interval-val');
+const hint = document.getElementById('hint');
+const tweetStatus = document.getElementById('tweet-status');
+
+function fmt(s) {
+  return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
+}
+
+function switchTab(t) {
+  document.getElementById('tab-text').style.display = t === 'text' ? '' : 'none';
+  document.getElementById('tab-tweet').style.display = t === 'tweet' ? '' : 'none';
+  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', (i===0) === (t==='text')));
+}
+
+function renderMessages() {
+  const ml = document.getElementById('msg-list');
+  ml.innerHTML = '';
+  messages.forEach((m, i) => {
+    const d = document.createElement('div'); d.className = 'msg-item';
+    d.innerHTML = `<span class="msg-label">${m}</span><button onclick="editMsg(${i})">編集</button><button onclick="deleteMsg(${i})">✕</button>`;
+    ml.appendChild(d);
+  });
+}
+
+function addMsg() {
+  const v = document.getElementById('new-msg').value.trim();
+  if (!v) return;
+  messages.push(v);
+  document.getElementById('new-msg').value = '';
+  renderMessages();
+}
+function deleteMsg(i) { messages.splice(i,1); renderMessages(); }
+function editMsg(i) {
+  const v = prompt('メッセージを編集', messages[i]);
+  if (v !== null && v.trim()) { messages[i] = v.trim(); renderMessages(); }
+}
+document.getElementById('new-msg').addEventListener('keydown', e => { if(e.key==='Enter' && !e.isComposing && e.keyCode !== 229) addMsg(); });
+
+function renderTweets() {
+  const tl = document.getElementById('tweet-list');
+  tl.innerHTML = '';
+  tweets.forEach((t, i) => {
+    const d = document.createElement('div'); d.className = 'msg-item';
+    d.innerHTML = `<span class="tag">tweet</span><span class="msg-label">@${t.handle}</span><button onclick="deleteTweet(${i})">✕</button>`;
+    tl.appendChild(d);
+  });
+}
+function deleteTweet(i) { tweets.splice(i,1); renderTweets(); }
+
+async function addTweet() {
+  const url = document.getElementById('new-tweet').value.trim();
+  if (!url) return;
+  if (!/twitter\.com|x\.com/.test(url)) { tweetStatus.textContent = '有効なツイートURLを入力してください'; return; }
+  tweetStatus.textContent = '読み込み中...';
+  try {
+    const res = await fetch(`https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`);
+    if (!res.ok) throw new Error();
+    const data = await res.json();
+    const authorMatch = data.html.match(/twitter\.com\/([^\/?"]+)/);
+    const handle = authorMatch ? authorMatch[1] : 'user';
+    const textMatch = data.html.match(/<p[^>]*>([\s\S]*?)<\/p>/);
+    let text = textMatch ? textMatch[1].replace(/<[^>]+>/g,'').trim() : '';
+    tweets.push({ url, name: data.author_name || handle, handle, text });
+    document.getElementById('new-tweet').value = '';
+    tweetStatus.textContent = '追加しました！';
+    setTimeout(() => tweetStatus.textContent = '', 2000);
+    renderTweets();
+  } catch(e) {
+    tweetStatus.textContent = 'ツイートを取得できませんでした';
+  }
+}
+document.getElementById('new-tweet').addEventListener('keydown', e => { if(e.key==='Enter' && !e.isComposing && e.keyCode !== 229) addTweet(); });
+
+function showPopup() {
+  const all = [...messages.map(m => ({type:'text',m})), ...tweets.map(t => ({type:'tweet',t}))];
+  if (!all.length) return;
+  const pick = all[Math.floor(Math.random() * all.length)];
+  const content = document.getElementById('popup-content');
+  if (pick.type === 'text') {
+    content.innerHTML = `<div id="popup-text" style="font-size:15px;font-weight:500;color:#1a1a1a;line-height:1.5;">${pick.m}</div>`;
+  } else {
+    const t = pick.t;
+    content.innerHTML = `
+      <div class="tweet-card">
+        <div class="tweet-author">
+          <div class="tweet-avatar">${t.handle[0].toUpperCase()}</div>
+          <div><div class="tweet-name">${t.name}</div><div class="tweet-handle">@${t.handle}</div></div>
+        </div>
+        <div class="tweet-body">${t.text}</div>
+        <a class="tweet-link" href="${t.url}" target="_blank">Twitterで見る →</a>
+      </div>`;
+  }
+  document.getElementById('overlay').classList.add('show');
+}
+function closePopup() { document.getElementById('overlay').classList.remove('show'); }
+
+let beepUrl = null;
+function makeBeepUrl() {
+  const sr = 44100, dur = 0.3, beeps = 3, gap = 0.35;
+  const total = Math.ceil(sr * (dur + gap) * beeps);
+  const buf = new Int16Array(total);
+  for (let b = 0; b < beeps; b++) {
+    const start = Math.floor(sr * gap * b);
+    for (let i = 0; i < Math.floor(sr * dur); i++) {
+      const t = i/sr, env = Math.min(t/0.01,1) * Math.max(0,1-t/dur);
+      buf[start+i] = Math.round(env * 0.4 * 32767 * Math.sin(2*Math.PI*520*t));
+    }
+  }
+  const hdr = new ArrayBuffer(44), v = new DataView(hdr);
+  const w = (o,s) => { for(let i=0;i<s.length;i++) v.setUint8(o+i,s.charCodeAt(i)); };
+  w(0,'RIFF'); v.setUint32(4,36+buf.byteLength,true); w(8,'WAVE'); w(12,'fmt ');
+  v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,sr,true); v.setUint32(28,sr*2,true); v.setUint16(32,2,true);
+  v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,buf.byteLength,true);
+  beepUrl = URL.createObjectURL(new Blob([hdr,buf.buffer],{type:'audio/wav'}));
+}
+makeBeepUrl();
+function playBeep() { try { new Audio(beepUrl).play(); } catch(e) {} }
+
+function notify() {
+  playBeep(); showPopup();
+  if (Notification.permission === 'granted') {
+    new Notification('休憩の時間です', { body: '休憩しましょう！' });
+  }
+}
+
+function tick() {
+  remaining = Math.round((endTime - Date.now()) / 1000);
+  if (remaining <= 0) { notify(); endTime = Date.now() + interval*60000; remaining = interval*60; }
+  display.textContent = fmt(Math.max(0, remaining));
+}
+
+slider.addEventListener('input', () => {
+  interval = +slider.value;
+  intervalVal.textContent = interval + '分';
+  if (!running) { remaining = interval*60; display.textContent = fmt(remaining); }
+});
+
+async function toggleTimer() {
+  if (!running) {
+    if (Notification.permission === 'default') {
+      const p = await Notification.requestPermission();
+      hint.textContent = p === 'granted' ? 'ブラウザ通知が有効です' : '通知は無効です（音とポップアップでお知らせします）';
+    }
+    running = true; endTime = Date.now() + remaining*1000;
+    timerId = setInterval(tick, 500);
+    startBtn.textContent = '停止'; statusText.textContent = '次の休憩まで'; slider.disabled = true;
+  } else {
+    running = false; clearInterval(timerId);
+    startBtn.textContent = '開始'; statusText.textContent = '一時停止中'; slider.disabled = false;
+  }
+}
+
+function resetTimer() {
+  running = false; clearInterval(timerId);
+  remaining = interval*60; display.textContent = fmt(remaining);
+  startBtn.textContent = '開始'; statusText.textContent = '次の休憩まで'; slider.disabled = false;
+}
+
+renderMessages();
+
+// ---- Todos ----
+const STATUSES = ['todo', 'doing', 'review', 'done'];
+const STATUS_LABELS = { todo: '未着手', doing: '進行中', review: '確認待ち', done: '完了' };
+const DAY_NAMES = ['月', '火', '水', '木', '金', '土', '日'];
+let todosByDay = {}; // { "2026-04-13": [{id, text, status}], ... }
+let collapsedDays = {}; // { "2026-04-13": true }
+
+function mondayOf(d) {
+  const x = new Date(d);
+  const day = x.getDay();
+  const diff = (day === 0 ? -6 : 1 - day);
+  x.setDate(x.getDate() + diff);
+  x.setHours(0,0,0,0);
+  return x.toISOString().slice(0,10);
+}
+function fmtWeekRange(mondayIso) {
+  const start = new Date(mondayIso);
+  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const f = d => `${d.getMonth()+1}/${d.getDate()}`;
+  return `${f(start)} - ${f(end)}`;
+}
+function weekDays(mondayIso) {
+  const days = [];
+  const start = new Date(mondayIso);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i);
+    days.push(d.toISOString().slice(0,10));
+  }
+  return days;
+}
+function todayIso() {
+  const d = new Date(); d.setHours(0,0,0,0);
+  return d.toISOString().slice(0,10);
+}
+
+function loadTodos() {
+  const currentWeek = mondayOf(new Date());
+  try {
+    const raw = localStorage.getItem('todoData');
+    if (raw) {
+      const data = JSON.parse(raw);
+      if (data.weekStart === currentWeek) {
+        todosByDay = data.todosByDay || {};
+      } else {
+        todosByDay = {};
+        saveTodos();
+      }
+    }
+  } catch(e) { todosByDay = {}; }
+  // default: collapse all except today
+  const t = todayIso();
+  weekDays(currentWeek).forEach(d => { if (d !== t) collapsedDays[d] = true; });
+  document.getElementById('week-label').textContent = fmtWeekRange(currentWeek);
+}
+function saveTodos() {
+  const data = { weekStart: mondayOf(new Date()), todosByDay };
+  try { localStorage.setItem('todoData', JSON.stringify(data)); } catch(e) {}
+}
+
+function escapeHtml(s) { return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderTodos() {
+  const root = document.getElementById('todo-days');
+  root.innerHTML = '';
+  const week = weekDays(mondayOf(new Date()));
+  const today = todayIso();
+
+  week.forEach((iso, di) => {
+    const date = new Date(iso);
+    const list = todosByDay[iso] || [];
+    const done = list.filter(t => t.status === 'done').length;
+    const isToday = iso === today;
+    const collapsed = collapsedDays[iso];
+
+    const sec = document.createElement('div');
+    sec.className = 'day-section' + (isToday ? ' today' : '') + (collapsed ? ' collapsed' : '');
+
+    const countText = list.length ? `${done} / ${list.length}` : '—';
+    sec.innerHTML = `
+      <div class="day-header" onclick="toggleDay('${iso}')">
+        <span class="day-caret">▼</span>
+        <span class="day-name">${DAY_NAMES[di]} ${date.getMonth()+1}/${date.getDate()}</span>
+        <span class="day-count">${countText}</span>
+      </div>
+      <div class="day-body">
+        <div class="day-todos" id="todos-${iso}"></div>
+        <div class="day-add">
+          <input type="text" id="input-${iso}" placeholder="タスクを追加..." maxlength="120">
+          <button onclick="addTodo('${iso}')">追加</button>
+        </div>
+      </div>`;
+    root.appendChild(sec);
+
+    const todosEl = sec.querySelector(`#todos-${iso}`);
+    list.forEach((t, i) => {
+      const item = document.createElement('div');
+      item.className = 'todo-item' + (t.status === 'done' ? ' done' : '');
+      item.innerHTML = `
+        <button class="status-chip status-${t.status}" onclick="cycleStatus('${iso}', ${i})">${STATUS_LABELS[t.status]}</button>
+        <span class="todo-text">${escapeHtml(t.text)}</span>
+        <button class="del" onclick="deleteTodo('${iso}', ${i})">✕</button>`;
+      todosEl.appendChild(item);
+    });
+
+    const input = sec.querySelector(`#input-${iso}`);
+    input.addEventListener('keydown', e => {
+      if (e.key === 'Enter' && !e.isComposing && e.keyCode !== 229) addTodo(iso);
+    });
+  });
+
+  renderProgress();
+}
+
+function renderProgress() {
+  const counts = { todo:0, doing:0, review:0, done:0 };
+  let total = 0;
+  Object.values(todosByDay).forEach(list => {
+    list.forEach(t => { counts[t.status]++; total++; });
+  });
+  const pct = total ? Math.round((counts.done / total) * 100) : 0;
+  document.getElementById('progress-fill').style.width = pct + '%';
+  document.getElementById('progress-count').textContent = `${counts.done} / ${total} 完了`;
+  const parts = [];
+  if (counts.doing) parts.push(`${counts.doing} 進行中`);
+  if (counts.review) parts.push(`${counts.review} 確認待ち`);
+  if (counts.todo) parts.push(`${counts.todo} 未着手`);
+  document.getElementById('progress-breakdown').textContent = parts.length ? parts.join(' · ') : (total ? 'すべて完了！' : 'タスクなし');
+}
+
+function toggleDay(iso) {
+  collapsedDays[iso] = !collapsedDays[iso];
+  renderTodos();
+}
+function addTodo(iso) {
+  const input = document.getElementById(`input-${iso}`);
+  const v = input.value.trim();
+  if (!v) return;
+  if (!todosByDay[iso]) todosByDay[iso] = [];
+  todosByDay[iso].push({ id: Date.now(), text: v, status: 'todo' });
+  input.value = '';
+  collapsedDays[iso] = false;
+  saveTodos(); renderTodos();
+  const next = document.getElementById(`input-${iso}`);
+  if (next) next.focus();
+}
+function deleteTodo(iso, i) {
+  todosByDay[iso].splice(i, 1);
+  if (!todosByDay[iso].length) delete todosByDay[iso];
+  saveTodos(); renderTodos();
+}
+function cycleStatus(iso, i) {
+  const cur = todosByDay[iso][i].status;
+  todosByDay[iso][i].status = STATUSES[(STATUSES.indexOf(cur) + 1) % STATUSES.length];
+  saveTodos(); renderTodos();
+}
+
+loadTodos();
+renderTodos();
+</script>
+</body>
+</html>
