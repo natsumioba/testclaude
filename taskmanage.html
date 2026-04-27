@@ -24,21 +24,16 @@
   #hint { font-size: 12px; color: #aaa; text-align: center; margin-bottom: 1.5rem; }
 
   .divider { border-top: 1px solid #e5e5e3; padding-top: 1.25rem; margin-top: 0.5rem; }
-  .tabs { display: flex; gap: 4px; margin-bottom: 1rem; }
-  .tab { flex: 1; padding: 7px; font-size: 13px; border-radius: 7px; border: 1px solid #d0d0cc; background: #fff; cursor: pointer; color: #888; }
-  .tab.active { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
 
   .msg-list { display: flex; flex-direction: column; gap: 6px; margin-bottom: 8px; }
   .msg-item { display: flex; align-items: center; gap: 6px; background: #f5f5f3; border-radius: 8px; padding: 8px 10px; }
   .msg-item .msg-label { flex: 1; font-size: 13px; color: #1a1a1a; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .msg-item .tag { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #e8f0fe; color: #3a6bc9; margin-right: 2px; flex-shrink: 0; }
   .msg-item button { padding: 2px 8px; font-size: 12px; border-radius: 6px; color: #aaa; border-color: transparent; background: transparent; min-width: unset; }
   .msg-item button:hover { background: #e8e8e6; color: #555; }
   .add-row { display: flex; gap: 6px; margin-top: 4px; }
   .add-row input { flex: 1; padding: 8px 10px; font-size: 13px; border: 1px solid #d0d0cc; border-radius: 8px; background: #fff; outline: none; min-width: 0; }
   .add-row input:focus { border-color: #aaa; }
   .add-row button { padding: 8px 14px; font-size: 13px; white-space: nowrap; flex-shrink: 0; }
-  #tweet-status { font-size: 12px; color: #aaa; margin-top: 6px; min-height: 16px; }
 
   /* popup */
   #overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 100; justify-content: center; align-items: center; padding: 1rem; }
@@ -47,13 +42,6 @@
   #popup-icon { font-size: 28px; margin-bottom: 0.5rem; }
   #popup-content { margin-bottom: 1rem; }
   #popup-text { font-size: 15px; font-weight: 500; color: #1a1a1a; line-height: 1.5; }
-  .tweet-card { background: #f7f9f9; border: 1px solid #e1e8ed; border-radius: 12px; padding: 1rem; text-align: left; margin-top: 0.5rem; }
-  .tweet-author { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
-  .tweet-avatar { width: 36px; height: 36px; border-radius: 50%; background: #1da1f2; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 14px; font-weight: 600; flex-shrink: 0; }
-  .tweet-name { font-size: 13px; font-weight: 600; color: #1a1a1a; }
-  .tweet-handle { font-size: 12px; color: #888; }
-  .tweet-body { font-size: 13px; color: #1a1a1a; line-height: 1.5; word-break: break-word; }
-  .tweet-link { display: block; margin-top: 8px; font-size: 12px; color: #1da1f2; text-decoration: none; }
   #popup-close { width: 100%; padding: 10px; background: #1a1a1a; color: #fff; border: none; border-radius: 8px; font-size: 14px; cursor: pointer; margin-top: 0.5rem; }
   #popup-close:hover { background: #333; }
 
@@ -121,27 +109,11 @@
   <p id="hint">開始すると通知の許可を求めます</p>
 
   <div class="divider">
-    <p class="section-label">アラートコンテンツ</p>
-    <div class="tabs">
-      <button class="tab active" onclick="switchTab('text')">テキスト</button>
-      <button class="tab" onclick="switchTab('tweet')">ツイート</button>
-    </div>
-
-    <div id="tab-text">
-      <div class="msg-list" id="msg-list"></div>
-      <div class="add-row">
-        <input type="text" id="new-msg" placeholder="メッセージを追加..." maxlength="80">
-        <button onclick="addMsg()">追加</button>
-      </div>
-    </div>
-
-    <div id="tab-tweet" style="display:none;">
-      <div class="msg-list" id="tweet-list"></div>
-      <div class="add-row">
-        <input type="text" id="new-tweet" placeholder="ツイートのURLを貼り付け...">
-        <button onclick="addTweet()">追加</button>
-      </div>
-      <p id="tweet-status"></p>
+    <p class="section-label">アラートメッセージ</p>
+    <div class="msg-list" id="msg-list"></div>
+    <div class="add-row">
+      <input type="text" id="new-msg" placeholder="メッセージを追加..." maxlength="80">
+      <button onclick="addMsg()">追加</button>
     </div>
   </div>
 </div>
@@ -175,7 +147,6 @@
 <script>
 let interval = 60, remaining = 3600, running = false, timerId = null, endTime = null;
 let messages = ['休憩しましょう！', '少し立ち上がって体を伸ばしてね', '水を飲んで一息つこう', '目を休めてください'];
-let tweets = []; // [{url, name, handle, text}]
 
 const display = document.getElementById('timer-display');
 const statusText = document.getElementById('status-text');
@@ -183,16 +154,9 @@ const startBtn = document.getElementById('start-btn');
 const slider = document.getElementById('interval');
 const intervalVal = document.getElementById('interval-val');
 const hint = document.getElementById('hint');
-const tweetStatus = document.getElementById('tweet-status');
 
 function fmt(s) {
   return String(Math.floor(s/60)).padStart(2,'0') + ':' + String(s%60).padStart(2,'0');
-}
-
-function switchTab(t) {
-  document.getElementById('tab-text').style.display = t === 'text' ? '' : 'none';
-  document.getElementById('tab-tweet').style.display = t === 'tweet' ? '' : 'none';
-  document.querySelectorAll('.tab').forEach((el,i) => el.classList.toggle('active', (i===0) === (t==='text')));
 }
 
 function renderMessages() {
@@ -219,60 +183,11 @@ function editMsg(i) {
 }
 document.getElementById('new-msg').addEventListener('keydown', e => { if(e.key==='Enter' && !e.isComposing && e.keyCode !== 229) addMsg(); });
 
-function renderTweets() {
-  const tl = document.getElementById('tweet-list');
-  tl.innerHTML = '';
-  tweets.forEach((t, i) => {
-    const d = document.createElement('div'); d.className = 'msg-item';
-    d.innerHTML = `<span class="tag">tweet</span><span class="msg-label">@${t.handle}</span><button onclick="deleteTweet(${i})">✕</button>`;
-    tl.appendChild(d);
-  });
-}
-function deleteTweet(i) { tweets.splice(i,1); renderTweets(); }
-
-async function addTweet() {
-  const url = document.getElementById('new-tweet').value.trim();
-  if (!url) return;
-  if (!/twitter\.com|x\.com/.test(url)) { tweetStatus.textContent = '有効なツイートURLを入力してください'; return; }
-  tweetStatus.textContent = '読み込み中...';
-  try {
-    const res = await fetch(`https://publish.twitter.com/oembed?url=${encodeURIComponent(url)}&omit_script=true`);
-    if (!res.ok) throw new Error();
-    const data = await res.json();
-    const authorMatch = data.html.match(/twitter\.com\/([^\/?"]+)/);
-    const handle = authorMatch ? authorMatch[1] : 'user';
-    const textMatch = data.html.match(/<p[^>]*>([\s\S]*?)<\/p>/);
-    let text = textMatch ? textMatch[1].replace(/<[^>]+>/g,'').trim() : '';
-    tweets.push({ url, name: data.author_name || handle, handle, text });
-    document.getElementById('new-tweet').value = '';
-    tweetStatus.textContent = '追加しました！';
-    setTimeout(() => tweetStatus.textContent = '', 2000);
-    renderTweets();
-  } catch(e) {
-    tweetStatus.textContent = 'ツイートを取得できませんでした';
-  }
-}
-document.getElementById('new-tweet').addEventListener('keydown', e => { if(e.key==='Enter' && !e.isComposing && e.keyCode !== 229) addTweet(); });
-
 function showPopup() {
-  const all = [...messages.map(m => ({type:'text',m})), ...tweets.map(t => ({type:'tweet',t}))];
-  if (!all.length) return;
-  const pick = all[Math.floor(Math.random() * all.length)];
+  if (!messages.length) return;
+  const m = messages[Math.floor(Math.random() * messages.length)];
   const content = document.getElementById('popup-content');
-  if (pick.type === 'text') {
-    content.innerHTML = `<div id="popup-text" style="font-size:15px;font-weight:500;color:#1a1a1a;line-height:1.5;">${pick.m}</div>`;
-  } else {
-    const t = pick.t;
-    content.innerHTML = `
-      <div class="tweet-card">
-        <div class="tweet-author">
-          <div class="tweet-avatar">${t.handle[0].toUpperCase()}</div>
-          <div><div class="tweet-name">${t.name}</div><div class="tweet-handle">@${t.handle}</div></div>
-        </div>
-        <div class="tweet-body">${t.text}</div>
-        <a class="tweet-link" href="${t.url}" target="_blank">Twitterで見る →</a>
-      </div>`;
-  }
+  content.innerHTML = `<div id="popup-text" style="font-size:15px;font-weight:500;color:#1a1a1a;line-height:1.5;">${m}</div>`;
   document.getElementById('overlay').classList.add('show');
 }
 function closePopup() { document.getElementById('overlay').classList.remove('show'); }
@@ -345,36 +260,42 @@ renderMessages();
 // ---- Todos ----
 const STATUSES = ['todo', 'doing', 'review', 'done'];
 const STATUS_LABELS = { todo: '未着手', doing: '進行中', review: '確認待ち', done: '完了' };
-const DAY_NAMES = ['月', '火', '水', '木', '金', '土', '日'];
+const DAY_NAMES = ['月', '火', '水', '木', '金'];
 let todosByDay = {}; // { "2026-04-13": [{id, text, status}], ... }
 let collapsedDays = {}; // { "2026-04-13": true }
 
+function toLocalIso(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
 function mondayOf(d) {
   const x = new Date(d);
   const day = x.getDay();
   const diff = (day === 0 ? -6 : 1 - day);
   x.setDate(x.getDate() + diff);
   x.setHours(0,0,0,0);
-  return x.toISOString().slice(0,10);
+  return toLocalIso(x);
 }
 function fmtWeekRange(mondayIso) {
   const start = new Date(mondayIso);
-  const end = new Date(start); end.setDate(end.getDate() + 6);
+  const end = new Date(start); end.setDate(end.getDate() + 4);
   const f = d => `${d.getMonth()+1}/${d.getDate()}`;
   return `${f(start)} - ${f(end)}`;
 }
 function weekDays(mondayIso) {
   const days = [];
   const start = new Date(mondayIso);
-  for (let i = 0; i < 7; i++) {
+  for (let i = 0; i < 5; i++) {
     const d = new Date(start); d.setDate(d.getDate() + i);
-    days.push(d.toISOString().slice(0,10));
+    days.push(toLocalIso(d));
   }
   return days;
 }
 function todayIso() {
   const d = new Date(); d.setHours(0,0,0,0);
-  return d.toISOString().slice(0,10);
+  return toLocalIso(d);
 }
 
 function loadTodos() {
